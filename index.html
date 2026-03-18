@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Concentración - Juego</title>
+<script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="bg-blue-100 flex flex-col items-center justify-center h-screen select-none">
+
+<h1 class="text-2xl font-bold mb-2">🎯 Tocá solo los VERDES</h1>
+<p class="mb-4">Puntos: <span id="score">0</span></p>
+
+<div id="gameArea" class="w-64 h-64 flex items-center justify-center rounded-2xl bg-white shadow-lg text-5xl cursor-pointer">
+</div>
+
+<p id="feedback" class="mt-4 text-xl font-semibold"></p>
+
+<script>
+const gameArea = document.getElementById("gameArea");
+const scoreDisplay = document.getElementById("score");
+const feedback = document.getElementById("feedback");
+
+let score = 0;
+let currentIsGreen = false;
+let canClick = true;
+
+// Emojis simples para hacerlo más atractivo
+const shapes = ["🔵","🟥","🟡","🟢","⭐","⬜"];
+
+function newRound() {
+    canClick = true;
+    feedback.textContent = "";
+
+    const randomShape = shapes[Math.floor(Math.random() * shapes.length)];
+
+    // 30% probabilidad de verde correcto
+    currentIsGreen = Math.random() < 0.3;
+
+    if (currentIsGreen) {
+        gameArea.style.backgroundColor = "#4ade80"; // verde
+    } else {
+        gameArea.style.backgroundColor = "#f87171"; // rojo
+    }
+
+    gameArea.textContent = randomShape;
+
+    // Si no toca cuando debía
+    setTimeout(() => {
+        if (currentIsGreen && canClick) {
+            feedback.textContent = "¡Se te pasó!";
+            feedback.className = "mt-4 text-xl text-orange-500 font-semibold";
+        }
+    }, 1000);
+}
+
+gameArea.addEventListener("click", () => {
+    if (!canClick) return;
+
+    canClick = false;
+
+    if (currentIsGreen) {
+        score++;
+        feedback.textContent = "¡Bien!";
+        feedback.className = "mt-4 text-xl text-green-600 font-semibold";
+        vibrate(50);
+    } else {
+        score--;
+        feedback.textContent = "¡No!";
+        feedback.className = "mt-4 text-xl text-red-600 font-semibold";
+        vibrate(150);
+    }
+
+    scoreDisplay.textContent = score;
+});
+
+// Vibración (si el dispositivo lo soporta)
+function vibrate(ms) {
+    if (navigator.vibrate) {
+        navigator.vibrate(ms);
+    }
+}
+
+// Loop del juego
+setInterval(newRound, 1200);
+
+// Primera ronda
+newRound();
+</script>
+
+</body>
+</html>
