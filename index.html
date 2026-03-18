@@ -11,34 +11,32 @@
 
 <div id="app" class="text-center">
 
-    <!-- Inicio -->
+    <!-- Pantalla inicio -->
     <div id="startScreen">
-        <h1 class="text-3xl font-bold mb-4">🎯 Tocá solo el color elegido</h1>
-
-        <p class="mb-2">Elegí un color:</p>
-        <div id="colorOptions" class="flex flex-wrap justify-center gap-2 mb-4"></div>
-
-        <button onclick="startGame()" class="bg-green-500 text-white px-6 py-3 rounded-xl text-xl shadow">
-            Start
-        </button>
+        <h1 class="text-3xl font-bold mb-4">🎯 Elegí el color</h1>
+        <div id="colorOptions" class="flex flex-wrap justify-center gap-3 mb-4"></div>
     </div>
 
-    <!-- Juego -->
+    <!-- Pantalla juego -->
     <div id="gameScreen" class="hidden">
         <h1 class="text-2xl font-bold mb-2">
             Tocá solo: <span id="targetColorText"></span>
         </h1>
 
-        <p>Puntos: <span id="score">0</span></p>
-        <p class="mb-4">Intento: <span id="round">1</span>/10</p>
+        <button onclick="beginRounds()" class="bg-green-500 text-white px-6 py-3 rounded-xl text-xl mb-4 shadow">
+            START
+        </button>
 
-        <div id="gameArea" class="w-64 h-64 flex items-center justify-center rounded-2xl bg-white shadow-lg text-6xl cursor-pointer">
+        <p>Puntos: <span id="score">0</span></p>
+        <p class="mb-4">Intento: <span id="round">0</span>/10</p>
+
+        <div id="gameArea" class="w-64 h-64 flex items-center justify-center rounded-2xl bg-white shadow-lg text-6xl">
         </div>
 
         <p id="feedback" class="mt-4 text-xl font-semibold"></p>
     </div>
 
-    <!-- Fin -->
+    <!-- Pantalla final -->
     <div id="endScreen" class="hidden">
         <h1 class="text-3xl font-bold mb-4">🎉 Fin del juego</h1>
         <p class="text-xl mb-4">Puntaje: <span id="finalScore"></span>/10</p>
@@ -51,16 +49,16 @@
 
 <script>
 const colors = [
-    {name: "rojo", class: "text-red-500"},
-    {name: "azul", class: "text-blue-500"},
-    {name: "verde", class: "text-green-500"},
-    {name: "amarillo", class: "text-yellow-400"},
-    {name: "violeta", class: "text-purple-500"},
-    {name: "rosa", class: "text-pink-500"},
-    {name: "naranja", class: "text-orange-500"},
-    {name: "gris", class: "text-gray-500"},
-    {name: "negro", class: "text-black"},
-    {name: "celeste", class: "text-cyan-400"}
+    {name: "rojo", value: "#ef4444"},
+    {name: "azul", value: "#3b82f6"},
+    {name: "verde", value: "#22c55e"},
+    {name: "amarillo", value: "#facc15"},
+    {name: "violeta", value: "#a855f7"},
+    {name: "rosa", value: "#ec4899"},
+    {name: "naranja", value: "#f97316"},
+    {name: "gris", value: "#6b7280"},
+    {name: "negro", value: "#000000"},
+    {name: "celeste", value: "#06b6d4"}
 ];
 
 const shapes = ["●","■","▲","★"];
@@ -68,11 +66,11 @@ const shapes = ["●","■","▲","★"];
 let targetColor = null;
 let score = 0;
 let round = 0;
-let currentMatch = false;
 let canClick = false;
+let sequence = [];
 let interval;
 
-// UI refs
+// UI
 const colorOptions = document.getElementById("colorOptions");
 const startScreen = document.getElementById("startScreen");
 const gameScreen = document.getElementById("gameScreen");
@@ -86,33 +84,50 @@ const finalScore = document.getElementById("finalScore");
 const targetColorText = document.getElementById("targetColorText");
 
 // Crear botones de colores
-colors.forEach((c, i) => {
+colors.forEach((c) => {
     const btn = document.createElement("button");
-    btn.className = `w-10 h-10 rounded-full ${c.class} border-2`;
+    btn.style.backgroundColor = c.value;
+    btn.className = "w-10 h-10 rounded-full border-2";
     btn.onclick = () => {
         targetColor = c;
+
         document.querySelectorAll("#colorOptions button").forEach(b => b.classList.remove("ring-4"));
         btn.classList.add("ring-4");
+
+        startScreen.classList.add("hidden");
+        gameScreen.classList.remove("hidden");
+        targetColorText.textContent = c.name;
     };
     colorOptions.appendChild(btn);
 });
 
-function startGame() {
-    if (!targetColor) {
-        alert("Elegí un color primero");
-        return;
-    }
-
+function beginRounds() {
     score = 0;
     round = 0;
+    scoreDisplay.textContent = score;
 
-    startScreen.classList.add("hidden");
-    gameScreen.classList.remove("hidden");
-
-    targetColorText.textContent = targetColor.name;
-
+    sequence = generateSequence();
     nextRound();
+
     interval = setInterval(nextRound, 2000);
+}
+
+// Genera secuencia con mínimo 4 aciertos
+function generateSequence() {
+    let seq = [];
+
+    // 4 correctos seguros
+    for (let i = 0; i < 4; i++) {
+        seq.push(true);
+    }
+
+    // resto random
+    for (let i = 4; i < 10; i++) {
+        seq.push(Math.random() < 0.5);
+    }
+
+    // mezclar
+    return seq.sort(() => Math.random() - 0.5);
 }
 
 function nextRound() {
@@ -121,24 +136,32 @@ function nextRound() {
         return;
     }
 
-    round++;
-    roundDisplay.textContent = round;
     feedback.textContent = "";
     canClick = true;
 
-    const shape = shapes[Math.floor(Math.random() * shapes.length)];
-    const color = colors[Math.floor(Math.random() * colors.length)];
+    const isMatch = sequence[round];
+    round++;
 
-    currentMatch = (color.name === targetColor.name);
+    roundDisplay.textContent = round;
+
+    const shape = shapes[Math.floor(Math.random() * shapes.length)];
+
+    let color;
+    if (isMatch) {
+        color = targetColor;
+    } else {
+        // elegir otro color distinto
+        const otherColors = colors.filter(c => c.name !== targetColor.name);
+        color = otherColors[Math.floor(Math.random() * otherColors.length)];
+    }
 
     gameArea.textContent = shape;
-    gameArea.className = `w-64 h-64 flex items-center justify-center rounded-2xl bg-white shadow-lg text-6xl cursor-pointer ${color.class}`;
+    gameArea.style.color = color.value;
 
-    // si NO tocó cuando debía
     setTimeout(() => {
         if (canClick) {
-            if (!currentMatch) {
-                score++; // correcto no tocar
+            if (!isMatch) {
+                score++; // bien no tocar
             } else {
                 feedback.textContent = "¡Se te pasó!";
             }
@@ -153,7 +176,9 @@ gameArea.addEventListener("click", () => {
 
     canClick = false;
 
-    if (currentMatch) {
+    const isMatch = sequence[round - 1];
+
+    if (isMatch) {
         score++;
         feedback.textContent = "¡Bien!";
     } else {
