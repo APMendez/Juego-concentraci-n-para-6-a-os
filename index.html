@@ -3,56 +3,111 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Concentración - Juego</title>
+<title>Juego de Concentración</title>
 <script src="https://cdn.tailwindcss.com"></script>
 </head>
 
-<body class="bg-blue-100 flex flex-col items-center justify-center h-screen select-none">
+<body class="bg-blue-100 flex items-center justify-center h-screen select-none">
 
-<h1 class="text-2xl font-bold mb-2">🎯 Tocá solo los VERDES</h1>
-<p class="mb-4">Puntos: <span id="score">0</span></p>
+<div id="app" class="text-center">
 
-<div id="gameArea" class="w-64 h-64 flex items-center justify-center rounded-2xl bg-white shadow-lg text-5xl cursor-pointer">
+    <!-- Pantalla inicio -->
+    <div id="startScreen">
+        <h1 class="text-3xl font-bold mb-4">🎯 Tocá solo los VERDES</h1>
+        <button onclick="startGame()" class="bg-green-500 text-white px-6 py-3 rounded-xl text-xl shadow">
+            Start
+        </button>
+    </div>
+
+    <!-- Pantalla juego -->
+    <div id="gameScreen" class="hidden">
+        <h1 class="text-2xl font-bold mb-2">Tocá solo los VERDES</h1>
+        <p class="mb-2">Puntos: <span id="score">0</span></p>
+        <p class="mb-4">Intento: <span id="round">1</span>/10</p>
+
+        <div id="gameArea" class="w-64 h-64 flex items-center justify-center rounded-2xl bg-white shadow-lg text-5xl cursor-pointer">
+        </div>
+
+        <p id="feedback" class="mt-4 text-xl font-semibold"></p>
+    </div>
+
+    <!-- Pantalla final -->
+    <div id="endScreen" class="hidden">
+        <h1 class="text-3xl font-bold mb-4">🎉 Fin del juego</h1>
+        <p class="text-xl mb-4">Puntaje final: <span id="finalScore"></span></p>
+        <button onclick="startGame()" class="bg-blue-500 text-white px-6 py-3 rounded-xl text-xl shadow">
+            Jugar de nuevo
+        </button>
+    </div>
+
 </div>
 
-<p id="feedback" class="mt-4 text-xl font-semibold"></p>
-
 <script>
+const startScreen = document.getElementById("startScreen");
+const gameScreen = document.getElementById("gameScreen");
+const endScreen = document.getElementById("endScreen");
+
 const gameArea = document.getElementById("gameArea");
 const scoreDisplay = document.getElementById("score");
+const roundDisplay = document.getElementById("round");
 const feedback = document.getElementById("feedback");
+const finalScore = document.getElementById("finalScore");
 
 let score = 0;
+let round = 0;
 let currentIsGreen = false;
-let canClick = true;
+let canClick = false;
+let interval;
 
-// Emojis simples para hacerlo más atractivo
-const shapes = ["🔵","🟥","🟡","🟢","⭐","⬜"];
+const shapes = ["🔵","🟥","🟡","⭐","⬜","🔺","🔶"];
 
-function newRound() {
-    canClick = true;
+function startGame() {
+    score = 0;
+    round = 0;
+
+    startScreen.classList.add("hidden");
+    endScreen.classList.add("hidden");
+    gameScreen.classList.remove("hidden");
+
+    scoreDisplay.textContent = score;
+
+    nextRound();
+
+    interval = setInterval(nextRound, 2000);
+}
+
+function nextRound() {
+    if (round >= 10) {
+        endGame();
+        return;
+    }
+
+    round++;
+    roundDisplay.textContent = round;
     feedback.textContent = "";
+
+    canClick = true;
 
     const randomShape = shapes[Math.floor(Math.random() * shapes.length)];
 
-    // 30% probabilidad de verde correcto
     currentIsGreen = Math.random() < 0.3;
 
     if (currentIsGreen) {
-        gameArea.style.backgroundColor = "#4ade80"; // verde
+        gameArea.style.backgroundColor = "#4ade80";
     } else {
-        gameArea.style.backgroundColor = "#f87171"; // rojo
+        gameArea.style.backgroundColor = "#f87171";
     }
 
     gameArea.textContent = randomShape;
 
-    // Si no toca cuando debía
+    // Si no tocó cuando debía
     setTimeout(() => {
         if (currentIsGreen && canClick) {
             feedback.textContent = "¡Se te pasó!";
             feedback.className = "mt-4 text-xl text-orange-500 font-semibold";
+            canClick = false;
         }
-    }, 1000);
+    }, 1500);
 }
 
 gameArea.addEventListener("click", () => {
@@ -75,18 +130,20 @@ gameArea.addEventListener("click", () => {
     scoreDisplay.textContent = score;
 });
 
-// Vibración (si el dispositivo lo soporta)
+function endGame() {
+    clearInterval(interval);
+
+    gameScreen.classList.add("hidden");
+    endScreen.classList.remove("hidden");
+
+    finalScore.textContent = score;
+}
+
 function vibrate(ms) {
     if (navigator.vibrate) {
         navigator.vibrate(ms);
     }
 }
-
-// Loop del juego
-setInterval(newRound, 1200);
-
-// Primera ronda
-newRound();
 </script>
 
 </body>
