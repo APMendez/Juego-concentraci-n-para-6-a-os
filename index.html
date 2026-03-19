@@ -31,20 +31,19 @@
     will-change: transform;
 }
 </style>
-
 </head>
 
 <body class="bg-blue-100 flex items-center justify-center h-screen select-none">
 
 <div class="text-center">
 
-    <!-- Pantalla inicio -->
+    <!-- Inicio -->
     <div id="startScreen">
         <h1 class="text-3xl font-bold mb-4">🎯 Elegí el color</h1>
         <div id="colorOptions" class="flex flex-wrap justify-center gap-3 mb-4"></div>
     </div>
 
-    <!-- Pantalla juego -->
+    <!-- Juego -->
     <div id="gameScreen" class="hidden">
         <h1 class="text-2xl font-bold mb-2">
             Tocá solo: <span id="targetColorText"></span>
@@ -63,7 +62,7 @@
         <p id="feedback" class="mt-4 text-xl font-semibold"></p>
     </div>
 
-    <!-- Pantalla final -->
+    <!-- Fin -->
     <div id="endScreen" class="hidden">
         <h1 class="text-3xl font-bold mb-4">🎉 Fin del juego</h1>
         <p class="text-xl mb-4">Puntaje: <span id="finalScore"></span>/10</p>
@@ -73,6 +72,12 @@
     </div>
 
 </div>
+
+<!-- 🔊 AUDIOS -->
+<audio id="successSound" src="https://cdn.pixabay.com/download/audio/2022/03/15/audio_115b9b6c2c.mp3?filename=correct-2-46134.mp3"></audio>
+<audio id="errorSound" src="https://cdn.pixabay.com/download/audio/2022/03/15/audio_c8c8a73467.mp3?filename=error-2-36058.mp3"></audio>
+<audio id="winSound" src="https://cdn.pixabay.com/download/audio/2022/03/15/audio_7f6b1e1c3c.mp3?filename=success-fanfare-trumpets-6185.mp3"></audio>
+<audio id="loseSound" src="https://cdn.pixabay.com/download/audio/2022/03/15/audio_4c0d06d7f7.mp3?filename=fail-144746.mp3"></audio>
 
 <script>
 const colors = [
@@ -111,80 +116,49 @@ const finalScore = document.getElementById("finalScore");
 const targetColorText = document.getElementById("targetColorText");
 const startBtn = document.getElementById("startBtn");
 
-// AUDIO (fix iPhone)
-let audioCtx = null;
+// AUDIO refs
+const successSound = document.getElementById("successSound");
+const errorSound = document.getElementById("errorSound");
+const winSound = document.getElementById("winSound");
+const loseSound = document.getElementById("loseSound");
 
-function initAudio() {
-    if (!audioCtx) {
-        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    }
-
-    const buffer = audioCtx.createBuffer(1, 1, 22050);
-    const source = audioCtx.createBufferSource();
-    source.buffer = buffer;
-    source.connect(audioCtx.destination);
-    source.start(0);
+// desbloqueo iPhone
+function unlockAudio() {
+    [successSound, errorSound, winSound, loseSound].forEach(a => {
+        a.volume = 0;
+        a.play().then(() => {
+            a.pause();
+            a.currentTime = 0;
+            a.volume = 1;
+        }).catch(()=>{});
+    });
 }
 
 function playSuccessSound() {
-    if (!audioCtx) return;
-
-    const osc = audioCtx.createOscillator();
-    const gain = audioCtx.createGain();
-
-    osc.type = "sine";
-    osc.frequency.value = 900;
-
-    gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.2);
-
-    osc.connect(gain);
-    gain.connect(audioCtx.destination);
-
-    osc.start();
-    osc.stop(audioCtx.currentTime + 0.2);
+    successSound.currentTime = 0;
+    successSound.play();
 }
 
 function playErrorSound() {
-    if (!audioCtx) return;
-
-    const osc = audioCtx.createOscillator();
-    const gain = audioCtx.createGain();
-
-    osc.type = "square";
-    osc.frequency.value = 180;
-
-    gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.3);
-
-    osc.connect(gain);
-    gain.connect(audioCtx.destination);
-
-    osc.start();
-    osc.stop(audioCtx.currentTime + 0.3);
+    errorSound.currentTime = 0;
+    errorSound.play();
 }
 
-// ANIMACIONES
+// animaciones
 function animateSuccess() {
     gameArea.classList.remove("animate-error");
     gameArea.classList.add("animate-success");
-
-    setTimeout(() => {
-        gameArea.classList.remove("animate-success");
-    }, 350);
+    setTimeout(() => gameArea.classList.remove("animate-success"), 350);
 }
 
 function animateError() {
     gameArea.classList.remove("animate-success");
     gameArea.classList.add("animate-error");
-
-    setTimeout(() => {
-        gameArea.classList.remove("animate-error");
-    }, 350);
+    setTimeout(() => gameArea.classList.remove("animate-error"), 350);
 }
 
-// Crear botones de colores
-colors.forEach((c) => {
+// botones color
+colors.forEach(c => {
     const btn = document.createElement("button");
     btn.style.backgroundColor = c.value;
     btn.className = "w-10 h-10 rounded-full border-2";
@@ -207,7 +181,7 @@ colors.forEach((c) => {
 startBtn.addEventListener("click", beginRounds);
 
 function beginRounds() {
-    initAudio(); // 🔑 clave iPhone
+    unlockAudio(); // 🔑 clave iPhone
 
     score = 0;
     round = 0;
@@ -221,21 +195,16 @@ function beginRounds() {
     interval = setInterval(nextRound, 2000);
 }
 
-// Secuencia
+// secuencia
 function generateSequence() {
     let seq = [];
-
     for (let i = 0; i < 4; i++) seq.push(true);
     for (let i = 4; i < 10; i++) seq.push(Math.random() < 0.5);
-
     return seq.sort(() => Math.random() - 0.5);
 }
 
 function nextRound() {
-    if (round >= 10) {
-        endGame();
-        return;
-    }
+    if (round >= 10) return endGame();
 
     feedback.textContent = "";
     canClick = true;
@@ -275,12 +244,10 @@ function nextRound() {
     }, 1800);
 }
 
-// CLICK
 gameArea.addEventListener("click", () => {
     if (!canClick) return;
 
     canClick = false;
-
     const isMatch = sequence[round - 1];
 
     if (isMatch) {
@@ -304,6 +271,14 @@ function endGame() {
     endScreen.classList.remove("hidden");
 
     finalScore.textContent = score;
+
+    if (score >= 7) {
+        winSound.currentTime = 0;
+        winSound.play();
+    } else {
+        loseSound.currentTime = 0;
+        loseSound.play();
+    }
 }
 </script>
 
