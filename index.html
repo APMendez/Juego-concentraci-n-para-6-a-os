@@ -70,6 +70,189 @@ let sequence = [];
 let interval;
 
 // UI
-const colorOptions = document.getElementById("color)
+const colorOptions = document.getElementById("colorOptions");
+const startScreen = document.getElementById("startScreen");
+const gameScreen = document.getElementById("gameScreen");
+const endScreen = document.getElementById("endScreen");
+
+const gameArea = document.getElementById("gameArea");
+const scoreDisplay = document.getElementById("score");
+const roundDisplay = document.getElementById("round");
+const feedback = document.getElementById("feedback");
+const finalScore = document.getElementById("finalScore");
+const targetColorText = document.getElementById("targetColorText");
+
+// AUDIO
+const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+function playSuccessSound() {
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+
+    osc.type = "sine";
+    osc.frequency.value = 800;
+    gain.gain.value = 0.1;
+
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+
+    osc.start();
+    osc.stop(audioCtx.currentTime + 0.15);
+}
+
+function playErrorSound() {
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+
+    osc.type = "sawtooth";
+    osc.frequency.value = 200;
+    gain.gain.value = 0.1;
+
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+
+    osc.start();
+    osc.stop(audioCtx.currentTime + 0.2);
+}
+
+// ANIMACIONES
+function animateSuccess() {
+    gameArea.animate([
+        { transform: "scale(1)" },
+        { transform: "scale(1.3)" },
+        { transform: "scale(1)" }
+    ], { duration: 250 });
+}
+
+function animateError() {
+    gameArea.animate([
+        { transform: "translateX(0px)" },
+        { transform: "translateX(-10px)" },
+        { transform: "translateX(10px)" },
+        { transform: "translateX(0px)" }
+    ], { duration: 300 });
+}
+
+// Crear botones de colores
+colors.forEach((c) => {
+    const btn = document.createElement("button");
+    btn.style.backgroundColor = c.value;
+    btn.className = "w-10 h-10 rounded-full border-2";
+
+    btn.onclick = () => {
+        targetColor = c;
+
+        document.querySelectorAll("#colorOptions button").forEach(b => b.classList.remove("ring-4"));
+        btn.classList.add("ring-4");
+
+        startScreen.classList.add("hidden");
+        gameScreen.classList.remove("hidden");
+        targetColorText.textContent = c.name;
+    };
+
+    colorOptions.appendChild(btn);
+});
+
+// Botón START
+const startButton = document.querySelector("button[onclick='beginRounds()']");
+
+function beginRounds() {
+    score = 0;
+    round = 0;
+    scoreDisplay.textContent = score;
+
+    startButton.style.display = "none";
+
+    sequence = generateSequence();
+    nextRound();
+
+    interval = setInterval(nextRound, 2000);
+}
+
+// Secuencia con mínimo 4 correctos
+function generateSequence() {
+    let seq = [];
+
+    for (let i = 0; i < 4; i++) seq.push(true);
+    for (let i = 4; i < 10; i++) seq.push(Math.random() < 0.5);
+
+    return seq.sort(() => Math.random() - 0.5);
+}
+
+function nextRound() {
+    if (round >= 10) {
+        endGame();
+        return;
+    }
+
+    feedback.textContent = "";
+    canClick = true;
+
+    const isMatch = sequence[round];
+    round++;
+
+    roundDisplay.textContent = round;
+
+    const shape = shapes[Math.floor(Math.random() * shapes.length)];
+
+    let color;
+    if (isMatch) {
+        color = targetColor;
+    } else {
+        const others = colors.filter(c => c.name !== targetColor.name);
+        color = others[Math.floor(Math.random() * others.length)];
+    }
+
+    gameArea.textContent = shape;
+    gameArea.style.color = color.value;
+
+    setTimeout(() => {
+        if (canClick) {
+            canClick = false;
+
+            if (!isMatch) {
+                score++;
+            } else {
+                feedback.textContent = "¡Se te pasó!";
+                playErrorSound();
+                animateError();
+            }
+
+            scoreDisplay.textContent = score;
+        }
+    }, 1800);
+}
+
+// CLICK
+gameArea.addEventListener("click", () => {
+    if (!canClick) return;
+
+    canClick = false;
+
+    const isMatch = sequence[round - 1];
+
+    if (isMatch) {
+        score++;
+        feedback.textContent = "¡Bien!";
+        playSuccessSound();
+        animateSuccess();
+    } else {
+        feedback.textContent = "¡No!";
+        playErrorSound();
+        animateError();
+    }
+
+    scoreDisplay.textContent = score;
+});
+
+function endGame() {
+    clearInterval(interval);
+
+    gameScreen.classList.add("hidden");
+    endScreen.classList.remove("hidden");
+
+    finalScore.textContent = score;
+}
+</script>
 </body>
 </html>
