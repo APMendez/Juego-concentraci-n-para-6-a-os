@@ -7,25 +7,13 @@
 <script src="https://cdn.tailwindcss.com"></script>
 
 <style>
-@keyframes bounce {
-    0% { transform: scale(1); }
-    50% { transform: scale(1.3); }
-    100% { transform: scale(1); }
-}
-
+@keyframes bounce { 50% { transform: scale(1.3); } }
 @keyframes shake {
-    0% { transform: translateX(0); }
     25% { transform: translateX(-10px); }
     50% { transform: translateX(10px); }
     75% { transform: translateX(-10px); }
-    100% { transform: translateX(0); }
 }
-
-@keyframes glow {
-    0% { box-shadow: 0 0 0px transparent; }
-    50% { box-shadow: 0 0 20px #4ade80; }
-    100% { box-shadow: 0 0 0px transparent; }
-}
+@keyframes glow { 50% { box-shadow: 0 0 20px #4ade80; } }
 
 .bounce { animation: bounce 0.4s; }
 .shake { animation: shake 0.4s; }
@@ -37,35 +25,34 @@
 
 <div id="app" class="text-center">
 
+    <!-- INICIO -->
     <div id="startScreen">
         <h1 class="text-3xl font-bold mb-4">🎯 Elegí el color</h1>
+        <p class="mb-2">🔥 Racha: <span id="streak">0</span></p>
         <div id="colorOptions" class="flex flex-wrap justify-center gap-3 mb-4"></div>
     </div>
 
+    <!-- JUEGO -->
     <div id="gameScreen" class="hidden">
         <h1 class="text-2xl font-bold mb-2">
             Tocá solo: <span id="targetColorText"></span>
         </h1>
 
-        <button id="startBtn" onclick="beginRounds()" class="bg-green-500 text-white px-6 py-3 rounded-xl text-xl mb-4 shadow">
+        <button id="startBtn" onclick="beginRounds()" class="bg-green-500 text-white px-6 py-3 rounded-xl text-xl mb-2 shadow">
             START
         </button>
 
+        <button id="stopBtn" onclick="stopGame()" class="bg-red-500 text-white px-4 py-2 rounded-lg mb-4 shadow hidden">
+            DETENER
+        </button>
+
         <p>Puntos: <span id="score">0</span></p>
+        <p>🔥 Racha: <span id="streakGame">0</span></p>
         <p class="mb-4">Intento: <span id="round">0</span>/10</p>
 
-        <div id="gameArea" class="w-64 h-64 flex items-center justify-center rounded-2xl bg-white shadow-lg text-6xl">
-        </div>
+        <div id="gameArea" class="w-64 h-64 flex items-center justify-center rounded-2xl bg-white shadow-lg text-6xl"></div>
 
         <p id="feedback" class="mt-4 text-xl font-semibold"></p>
-    </div>
-
-    <div id="endScreen" class="hidden">
-        <h1 class="text-3xl font-bold mb-4">🎉 Fin del juego</h1>
-        <p class="text-xl mb-4">Puntaje: <span id="finalScore"></span>/10</p>
-        <button onclick="location.reload()" class="bg-blue-500 text-white px-6 py-3 rounded-xl text-xl shadow">
-            Jugar de nuevo
-        </button>
     </div>
 
 </div>
@@ -73,186 +60,193 @@
 <script>
 // AUDIO
 const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-
 function playSound(freq, duration) {
     const osc = audioCtx.createOscillator();
     const gain = audioCtx.createGain();
-
     osc.connect(gain);
     gain.connect(audioCtx.destination);
-
     osc.frequency.value = freq;
-    osc.type = "sine";
-
     gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
     gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
-
     osc.start();
     osc.stop(audioCtx.currentTime + duration);
 }
 
-// COLORES
+// DATA
 const colors = [
-    {name: "rojo", value: "#ef4444"},
-    {name: "azul", value: "#3b82f6"},
-    {name: "verde", value: "#22c55e"},
-    {name: "amarillo", value: "#facc15"},
-    {name: "violeta", value: "#a855f7"},
-    {name: "rosa", value: "#ec4899"},
-    {name: "naranja", value: "#f97316"},
-    {name: "gris", value: "#6b7280"},
-    {name: "negro", value: "#000000"},
-    {name: "celeste", value: "#06b6d4"}
+    {name:"rojo",value:"#ef4444"},
+    {name:"azul",value:"#3b82f6"},
+    {name:"verde",value:"#22c55e"},
+    {name:"amarillo",value:"#facc15"},
+    {name:"violeta",value:"#a855f7"},
+    {name:"rosa",value:"#ec4899"},
+    {name:"naranja",value:"#f97316"},
+    {name:"gris",value:"#6b7280"},
+    {name:"negro",value:"#000"},
+    {name:"celeste",value:"#06b6d4"}
 ];
 
 const shapes = ["●","■","▲","★"];
 
-let targetColor = null;
-let score = 0;
-let round = 0;
-let canClick = false;
-let sequence = [];
-let interval;
-let currentMatch = false;
+let targetColor=null, score=0, round=0, canClick=false;
+let sequence=[], interval=null, currentMatch=false;
+let streak=0;
 
 // UI
-const colorOptions = document.getElementById("colorOptions");
-const startScreen = document.getElementById("startScreen");
-const gameScreen = document.getElementById("gameScreen");
-const endScreen = document.getElementById("endScreen");
+const colorOptions=document.getElementById("colorOptions");
+const startScreen=document.getElementById("startScreen");
+const gameScreen=document.getElementById("gameScreen");
 
-const gameArea = document.getElementById("gameArea");
-const scoreDisplay = document.getElementById("score");
-const roundDisplay = document.getElementById("round");
-const feedback = document.getElementById("feedback");
-const finalScore = document.getElementById("finalScore");
-const targetColorText = document.getElementById("targetColorText");
-const startBtn = document.getElementById("startBtn");
+const gameArea=document.getElementById("gameArea");
+const scoreDisplay=document.getElementById("score");
+const roundDisplay=document.getElementById("round");
+const feedback=document.getElementById("feedback");
+const targetColorText=document.getElementById("targetColorText");
 
-// botones de color
-colors.forEach((c) => {
-    const btn = document.createElement("button");
-    btn.style.backgroundColor = c.value;
-    btn.className = "w-10 h-10 rounded-full border-2";
-    btn.onclick = () => {
-        targetColor = c;
+const startBtn=document.getElementById("startBtn");
+const stopBtn=document.getElementById("stopBtn");
+const streakDisplay=document.getElementById("streak");
+const streakGame=document.getElementById("streakGame");
 
-        document.querySelectorAll("#colorOptions button").forEach(b => b.classList.remove("ring-4"));
+// botones color
+colors.forEach(c=>{
+    const btn=document.createElement("button");
+    btn.style.backgroundColor=c.value;
+    btn.className="w-10 h-10 rounded-full border-2";
+    btn.onclick=()=>{
+        targetColor=c;
+        document.querySelectorAll("#colorOptions button").forEach(b=>b.classList.remove("ring-4"));
         btn.classList.add("ring-4");
-
         startScreen.classList.add("hidden");
         gameScreen.classList.remove("hidden");
-        targetColorText.textContent = c.name;
+        targetColorText.textContent=c.name;
+        streakGame.textContent=streak;
     };
     colorOptions.appendChild(btn);
 });
 
-function beginRounds() {
-    if (interval) return;
+function beginRounds(){
+    if(interval) return;
 
-    startBtn.style.display = "none";
+    startBtn.style.display="none";
+    stopBtn.classList.remove("hidden");
 
-    score = 0;
-    round = 0;
-    scoreDisplay.textContent = score;
+    score=0;
+    round=0;
+    scoreDisplay.textContent=score;
+    feedback.textContent="";
 
-    sequence = generateSequence();
+    sequence=generateSequence();
 
     nextRound();
-    interval = setInterval(nextRound, 2000);
+    interval=setInterval(nextRound,2000);
 }
 
-function generateSequence() {
-    let seq = [];
-
-    for (let i = 0; i < 4; i++) seq.push(true);
-    for (let i = 4; i < 10; i++) seq.push(Math.random() < 0.5);
-
-    return seq.sort(() => Math.random() - 0.5);
+function stopGame(){
+    resetToStart(true);
 }
 
-function animate(type) {
+function generateSequence(){
+    let seq=[];
+    for(let i=0;i<4;i++) seq.push(true);
+    for(let i=4;i<10;i++) seq.push(Math.random()<0.5);
+    return seq.sort(()=>Math.random()-0.5);
+}
+
+function animate(type){
     gameArea.classList.remove("bounce","shake","glow");
-
-    void gameArea.offsetWidth; // reset anim
-
+    void gameArea.offsetWidth;
     gameArea.classList.add(type);
 }
 
-function nextRound() {
-    if (round >= 10) {
+function nextRound(){
+    if(round>=10){
         endGame();
         return;
     }
 
-    canClick = false;
-    feedback.textContent = "";
+    canClick=false;
+    feedback.textContent="";
 
-    currentMatch = sequence[round];
+    currentMatch=sequence[round];
     round++;
+    roundDisplay.textContent=round;
 
-    roundDisplay.textContent = round;
+    const shape=shapes[Math.floor(Math.random()*shapes.length)];
+    let color=currentMatch ? targetColor :
+        colors.filter(c=>c.name!==targetColor.name)[Math.floor(Math.random()*9)];
 
-    const shape = shapes[Math.floor(Math.random() * shapes.length)];
+    gameArea.textContent=shape;
+    gameArea.style.color=color.value;
 
-    let color;
-    if (currentMatch) {
-        color = targetColor;
-    } else {
-        const other = colors.filter(c => c.name !== targetColor.name);
-        color = other[Math.floor(Math.random() * other.length)];
-    }
+    setTimeout(()=>{canClick=true;},200);
 
-    gameArea.textContent = shape;
-    gameArea.style.color = color.value;
-
-    setTimeout(() => { canClick = true; }, 200);
-
-    setTimeout(() => {
-        if (canClick) {
-            if (!currentMatch) {
+    setTimeout(()=>{
+        if(canClick){
+            if(!currentMatch){
                 score++;
-                feedback.textContent = "👍 Bien";
-                playSound(600, 0.1);
+                feedback.textContent="👍 Bien";
+                playSound(600,0.1);
                 animate("glow");
             } else {
-                feedback.textContent = "¡Se te pasó!";
-                playSound(200, 0.2);
+                feedback.textContent="¡Se te pasó!";
+                playSound(200,0.2);
                 animate("shake");
             }
-            scoreDisplay.textContent = score;
-            canClick = false;
+            scoreDisplay.textContent=score;
+            canClick=false;
         }
-    }, 1800);
+    },1800);
 }
 
-gameArea.addEventListener("click", () => {
-    if (!canClick) return;
+gameArea.addEventListener("click",()=>{
+    if(!canClick) return;
+    canClick=false;
 
-    canClick = false;
-
-    if (currentMatch) {
+    if(currentMatch){
         score++;
-        feedback.textContent = "¡Bien!";
-        playSound(800, 0.15);
+        feedback.textContent="¡Bien!";
+        playSound(800,0.15);
         animate("bounce");
     } else {
-        feedback.textContent = "¡No!";
-        playSound(150, 0.2);
+        feedback.textContent="¡No!";
+        playSound(150,0.2);
         animate("shake");
     }
 
-    scoreDisplay.textContent = score;
+    scoreDisplay.textContent=score;
 });
 
-function endGame() {
+function endGame(){
     clearInterval(interval);
-    interval = null;
+    interval=null;
+
+    if(score>=7){
+        streak++;
+        streakDisplay.textContent=streak;
+        alert("🎉 ¡Ganaste! Racha: "+streak);
+    } else {
+        resetToStart(true);
+        return;
+    }
+
+    resetToStart(false);
+}
+
+function resetToStart(resetStreak){
+    clearInterval(interval);
+    interval=null;
+
+    if(resetStreak){
+        streak=0;
+        streakDisplay.textContent=streak;
+    }
 
     gameScreen.classList.add("hidden");
-    endScreen.classList.remove("hidden");
+    startScreen.classList.remove("hidden");
 
-    finalScore.textContent = score;
+    startBtn.style.display="block";
+    stopBtn.classList.add("hidden");
 }
 </script>
 
