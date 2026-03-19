@@ -187,16 +187,18 @@ startBtn.onclick=()=>{
     nextRound();
 };
 
-// PLAY AGAIN (sin perder wins)
+// PLAY AGAIN
 playAgainBtn.onclick=()=>{
     endScreen.classList.add("hidden");
     startScreen.classList.remove("hidden");
 };
 
-// STOP
+// STOP (resetea wins)
 stopBtn.onclick=()=>{
     clearTimeout(timeoutId);
+    wins = 0;
     resetGame();
+    winsDisplay.textContent = wins;
 };
 
 function resetGame(){
@@ -256,7 +258,7 @@ function nextRound(){
             if(!isMatch){
                 score++;
                 streak++;
-                speed=Math.max(750, speed - (80 + streak*10));
+                speed=Math.max(800, speed - (80 + streak*10));
             }else{
                 feedback.textContent="¡Se te pasó!";
                 playErrorSound();
@@ -284,7 +286,7 @@ gameArea.onclick=()=>{
         feedback.textContent="¡Bien!";
         playSuccessSound();
         animateSuccess();
-        speed=Math.max(750, speed - (80 + streak*10));
+        speed=Math.max(800, speed - (80 + streak*10));
     }else{
         feedback.textContent="¡No!";
         playErrorSound();
