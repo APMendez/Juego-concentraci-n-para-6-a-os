@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Juego de Concentración - Modo Reto</title>
+<title>Modo Reto</title>
 <script src="https://cdn.tailwindcss.com"></script>
 </head>
 
@@ -20,26 +20,31 @@
 
 <!-- JUEGO -->
 <div id="gameScreen" class="hidden">
-    <h2 class="text-xl mb-2">Tocá solo: <span id="targetColorText"></span></h2>
-    <p class="mb-2">Nivel: <span id="level"></span></p>
+    <h2 class="mb-2">Tocá solo: <span id="targetColorText"></span></h2>
+    <p>Nivel: <span id="level"></span></p>
     <p>Puntos: <span id="score">0</span></p>
-    <p class="mb-3">Intento: <span id="round">0</span></p>
+    <p>Intento: <span id="round">0</span></p>
 
-    <button id="startBtn" onclick="beginGame()" class="bg-green-500 text-white px-6 py-3 rounded-xl mb-3">
+    <button id="startBtn" onclick="beginGame()" class="bg-green-500 text-white px-6 py-2 rounded mb-2">
         START
+    </button>
+
+    <button onclick="stopGame()" class="bg-red-500 text-white px-4 py-2 rounded mb-3">
+        Detener
     </button>
 
     <div id="gameArea" class="w-64 h-64 bg-white rounded-2xl flex items-center justify-center text-6xl shadow-lg"></div>
 
-    <p id="feedback" class="mt-3 text-xl font-semibold"></p>
+    <p id="feedback" class="mt-3 text-xl"></p>
 </div>
 
 <!-- FIN -->
 <div id="endScreen" class="hidden">
-    <h1 class="text-3xl font-bold mb-4">🎉 Resultado</h1>
-    <p class="mb-2">Puntaje: <span id="finalScore"></span></p>
-    <p class="mb-4">Nivel alcanzado: <span id="finalLevel"></span></p>
-    <button onclick="restart()" class="bg-blue-500 text-white px-6 py-3 rounded-xl">
+    <h1 class="text-3xl mb-3">Resultado</h1>
+    <p>Puntaje: <span id="finalScore"></span></p>
+    <p>Nivel actual: <span id="finalLevel"></span></p>
+
+    <button onclick="restart()" class="bg-blue-500 text-white px-6 py-3 rounded mt-4">
         Jugar otra vez
     </button>
 </div>
@@ -53,14 +58,16 @@ const MAX_ROUNDS = 10;
 const MAX_TIME = 2000;
 const MIN_TIME = 650;
 
-// ESTADO
-let currentRounds = MIN_ROUNDS;
-let currentTime = MAX_TIME;
+// ESTADO GLOBAL
+let level = 0;
+let streak = 0;
 
+let currentRounds, currentTime;
 let targetColor;
+
 let score, round, sequence, canClick, interval;
 
-// COLORES
+// DATA
 const colors = [
     {name:"rojo",value:"#ef4444"},
     {name:"azul",value:"#3b82f6"},
@@ -87,36 +94,39 @@ const feedback = document.getElementById("feedback");
 
 const scoreDisplay = document.getElementById("score");
 const roundDisplay = document.getElementById("round");
+
 const finalScore = document.getElementById("finalScore");
+const finalLevel = document.getElementById("finalLevel");
 
 const targetColorText = document.getElementById("targetColorText");
 const levelDisplay = document.getElementById("level");
-const finalLevel = document.getElementById("finalLevel");
 
 const startBtn = document.getElementById("startBtn");
 
-// BOTONES DE COLOR
+// COLORES
 colors.forEach(c=>{
     const btn=document.createElement("button");
     btn.style.backgroundColor=c.value;
-    btn.className="w-10 h-10 rounded-full border-2";
+    btn.className="w-10 h-10 rounded-full";
     btn.onclick=()=>{
         targetColor=c;
         startScreen.classList.add("hidden");
         gameScreen.classList.remove("hidden");
         targetColorText.textContent=c.name;
+        levelDisplay.textContent=level;
     };
     colorOptions.appendChild(btn);
 });
 
-// CALCULAR TIEMPO SEGÚN RONDAS
+// DIFICULTAD
 function updateDifficulty(){
-    const progress=(currentRounds-MIN_ROUNDS)/(MAX_ROUNDS-MIN_ROUNDS);
-    currentTime=MAX_TIME-(progress*(MAX_TIME-MIN_TIME));
-    currentTime=Math.max(currentTime,MIN_TIME);
+    currentRounds = Math.min(MIN_ROUNDS + level, MAX_ROUNDS);
+
+    const progress = (currentRounds - MIN_ROUNDS) / (MAX_ROUNDS - MIN_ROUNDS);
+    currentTime = MAX_TIME - progress * (MAX_TIME - MIN_TIME);
 }
 
-// GENERAR SECUENCIA
+// SECUENCIA
 function generateSequence(){
     let seq=[];
     let minMatches=Math.ceil(currentRounds*0.4);
@@ -127,21 +137,29 @@ function generateSequence(){
     return seq.sort(()=>Math.random()-0.5);
 }
 
-// INICIAR PARTIDA
+// START
 function beginGame(){
     score=0;
     round=0;
-    updateDifficulty();
 
+    updateDifficulty();
     sequence=generateSequence();
 
     scoreDisplay.textContent=0;
-    levelDisplay.textContent=currentRounds;
+    roundDisplay.textContent=0;
 
     startBtn.style.display="none";
 
     nextRound();
     interval=setInterval(nextRound,currentTime);
+}
+
+// STOP
+function stopGame(){
+    clearInterval(interval);
+    streak = 0;
+    level = 0;
+    goToStart();
 }
 
 // RONDA
@@ -209,26 +227,40 @@ gameArea.onclick=()=>{
 function endGame(){
     clearInterval(interval);
 
+    // evaluar victoria perfecta
+    if(score === currentRounds){
+        streak++;
+        level++;
+    } else {
+        streak = 0;
+        level = 0;
+    }
+
     gameScreen.classList.add("hidden");
     endScreen.classList.remove("hidden");
 
-    finalScore.textContent=score+"/"+currentRounds;
-    finalLevel.textContent=currentRounds;
-
-    // subir dificultad
-    if(currentRounds<MAX_ROUNDS){
-        currentRounds++;
-    }
+    finalScore.textContent = score + "/" + currentRounds;
+    finalLevel.textContent = level;
 }
 
-// REINICIAR
+// RESTART → vuelve a inicio
 function restart(){
-    gameScreen.classList.remove("hidden");
+    level = 0;
+    streak = 0;
+    goToStart();
+}
+
+// volver al inicio limpio
+function goToStart(){
+    gameScreen.classList.add("hidden");
     endScreen.classList.add("hidden");
+    startScreen.classList.remove("hidden");
+
+    targetColor = null;
     startBtn.style.display="block";
 }
 
-// FX SONIDO + ANIMACIÓN
+// FX
 const audioCtx=new(window.AudioContext||window.webkitAudioContext)();
 
 function successFX(){
@@ -237,9 +269,7 @@ function successFX(){
 }
 
 function errorFX(){
-    gameArea.animate([
-        {transform:"translateX(0)"},{transform:"translateX(-10px)"},{transform:"translateX(10px)"},{transform:"translateX(0)"}
-    ],{duration:300});
+    gameArea.animate([{transform:"translateX(0)"},{transform:"translateX(-10px)"},{transform:"translateX(10px)"},{transform:"translateX(0)"}],{duration:300});
     beep(200,0.2,"sawtooth");
 }
 
@@ -254,7 +284,6 @@ function beep(freq,time,type="sine"){
     osc.start();
     osc.stop(audioCtx.currentTime+time);
 }
-
 </script>
 
 </body>
