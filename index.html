@@ -28,7 +28,10 @@
     <!-- INICIO -->
     <div id="startScreen">
         <h1 class="text-3xl font-bold mb-4">🎯 Elegí el color</h1>
-        <p class="mb-2">🔥 Racha: <span id="streak">0</span></p>
+
+        <p>🔥 Racha actual: <span id="streak">0</span></p>
+        <p class="mb-2">🏆 Mejor racha: <span id="bestStreak">0</span></p>
+
         <div id="colorOptions" class="flex flex-wrap justify-center gap-3 mb-4"></div>
     </div>
 
@@ -72,6 +75,9 @@ function playSound(freq, duration) {
     osc.stop(audioCtx.currentTime + duration);
 }
 
+// STORAGE
+let bestStreak = Number(localStorage.getItem("bestStreak")) || 0;
+
 // DATA
 const colors = [
     {name:"rojo",value:"#ef4444"},
@@ -107,6 +113,10 @@ const startBtn=document.getElementById("startBtn");
 const stopBtn=document.getElementById("stopBtn");
 const streakDisplay=document.getElementById("streak");
 const streakGame=document.getElementById("streakGame");
+const bestStreakDisplay=document.getElementById("bestStreak");
+
+// mostrar best streak al iniciar
+bestStreakDisplay.textContent = bestStreak;
 
 // botones color
 colors.forEach(c=>{
@@ -117,8 +127,10 @@ colors.forEach(c=>{
         targetColor=c;
         document.querySelectorAll("#colorOptions button").forEach(b=>b.classList.remove("ring-4"));
         btn.classList.add("ring-4");
+
         startScreen.classList.add("hidden");
         gameScreen.classList.remove("hidden");
+
         targetColorText.textContent=c.name;
         streakGame.textContent=streak;
     };
@@ -173,6 +185,7 @@ function nextRound(){
     roundDisplay.textContent=round;
 
     const shape=shapes[Math.floor(Math.random()*shapes.length)];
+
     let color=currentMatch ? targetColor :
         colors.filter(c=>c.name!==targetColor.name)[Math.floor(Math.random()*9)];
 
@@ -223,6 +236,14 @@ function endGame(){
 
     if(score>=7){
         streak++;
+
+        // actualizar mejor racha
+        if(streak > bestStreak){
+            bestStreak = streak;
+            localStorage.setItem("bestStreak", bestStreak);
+            bestStreakDisplay.textContent = bestStreak;
+        }
+
         streakDisplay.textContent=streak;
         alert("🎉 ¡Ganaste! Racha: "+streak);
     } else {
