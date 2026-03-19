@@ -65,7 +65,8 @@
     <h1 class="text-3xl font-bold mb-4">🎉 Fin del juego</h1>
     <p class="text-xl mb-4">Puntaje: <span id="finalScore"></span>/10</p>
     <p class="text-lg mb-4">🏆 Victorias seguidas: <span id="finalWins"></span></p>
-    <button onclick="location.reload()" class="bg-blue-500 text-white px-6 py-3 rounded-xl text-xl shadow">
+
+    <button id="playAgainBtn" class="bg-blue-500 text-white px-6 py-3 rounded-xl text-xl shadow">
         Jugar de nuevo
     </button>
 </div>
@@ -135,7 +136,7 @@ function animateError(){
     setTimeout(()=>gameArea.classList.remove("animate-error"),300);
 }
 
-// UI
+// UI refs
 const colorOptions=document.getElementById("colorOptions");
 const startScreen=document.getElementById("startScreen");
 const gameScreen=document.getElementById("gameScreen");
@@ -145,14 +146,15 @@ const scoreDisplay=document.getElementById("score");
 const roundDisplay=document.getElementById("round");
 const feedback=document.getElementById("feedback");
 const finalScore=document.getElementById("finalScore");
+const finalWins=document.getElementById("finalWins");
 const targetColorText=document.getElementById("targetColorText");
 const startBtn=document.getElementById("startBtn");
 const stopBtn=document.getElementById("stopBtn");
 const streakDisplay=document.getElementById("streak");
 const winsDisplay=document.getElementById("wins");
-const finalWins=document.getElementById("finalWins");
+const playAgainBtn=document.getElementById("playAgainBtn");
 
-// botones color
+// colores
 colors.forEach(c=>{
     const btn=document.createElement("button");
     btn.style.backgroundColor=c.value;
@@ -183,6 +185,12 @@ startBtn.onclick=()=>{
 
     sequence=generateSequence();
     nextRound();
+};
+
+// PLAY AGAIN (sin perder wins)
+playAgainBtn.onclick=()=>{
+    endScreen.classList.add("hidden");
+    startScreen.classList.remove("hidden");
 };
 
 // STOP
@@ -248,7 +256,7 @@ function nextRound(){
             if(!isMatch){
                 score++;
                 streak++;
-                speed=Math.max(650, speed - (80 + streak*10));
+                speed=Math.max(750, speed - (80 + streak*10));
             }else{
                 feedback.textContent="¡Se te pasó!";
                 playErrorSound();
@@ -276,7 +284,7 @@ gameArea.onclick=()=>{
         feedback.textContent="¡Bien!";
         playSuccessSound();
         animateSuccess();
-        speed=Math.max(650, speed - (80 + streak*10));
+        speed=Math.max(750, speed - (80 + streak*10));
     }else{
         feedback.textContent="¡No!";
         playErrorSound();
@@ -300,11 +308,12 @@ function endGame(){
         playLoseSound();
     }
 
-    gameScreen.classList.add("hidden");
-    endScreen.classList.remove("hidden");
-
     finalScore.textContent=score;
     finalWins.textContent=wins;
+    winsDisplay.textContent=wins;
+
+    gameScreen.classList.add("hidden");
+    endScreen.classList.remove("hidden");
 }
 </script>
 
