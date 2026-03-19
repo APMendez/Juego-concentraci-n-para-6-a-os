@@ -9,26 +9,24 @@
 <style>
 @keyframes pop {
     0% { transform: scale(1); }
-    50% { transform: scale(1.5); }
+    50% { transform: scale(1.4); }
     100% { transform: scale(1); }
 }
 
 @keyframes shake {
     0% { transform: translate3d(0,0,0); }
-    25% { transform: translate3d(-12px,0,0); }
-    50% { transform: translate3d(12px,0,0); }
-    75% { transform: translate3d(-8px,0,0); }
+    25% { transform: translate3d(-10px,0,0); }
+    50% { transform: translate3d(10px,0,0); }
+    75% { transform: translate3d(-6px,0,0); }
     100% { transform: translate3d(0,0,0); }
 }
 
 .animate-success {
-    animation: pop 0.35s ease;
-    will-change: transform;
+    animation: pop 0.3s ease;
 }
 
 .animate-error {
-    animation: shake 0.35s;
-    will-change: transform;
+    animation: shake 0.3s;
 }
 </style>
 </head>
@@ -49,14 +47,19 @@
             Tocá solo: <span id="targetColorText"></span>
         </h1>
 
-        <button id="startBtn" class="bg-green-500 text-white px-6 py-3 rounded-xl text-xl mb-4 shadow">
+        <button id="startBtn" class="bg-green-500 text-white px-6 py-3 rounded-xl text-xl mb-2 shadow">
             START
+        </button>
+
+        <!-- STOP -->
+        <button id="stopBtn" class="bg-red-500 text-white px-6 py-2 rounded-xl text-lg mb-4 shadow hidden">
+            STOP
         </button>
 
         <p>Puntos: <span id="score">0</span></p>
         <p class="mb-4">Intento: <span id="round">0</span>/10</p>
 
-        <div id="gameArea" class="w-64 h-64 flex items-center justify-center rounded-2xl bg-white shadow-lg text-6xl transform-gpu">
+        <div id="gameArea" class="w-64 h-64 flex items-center justify-center rounded-2xl bg-white shadow-lg text-6xl">
         </div>
 
         <p id="feedback" class="mt-4 text-xl font-semibold"></p>
@@ -72,12 +75,6 @@
     </div>
 
 </div>
-
-<!-- 🔊 AUDIOS -->
-<audio id="successSound" src="https://cdn.pixabay.com/download/audio/2022/03/15/audio_115b9b6c2c.mp3?filename=correct-2-46134.mp3"></audio>
-<audio id="errorSound" src="https://cdn.pixabay.com/download/audio/2022/03/15/audio_c8c8a73467.mp3?filename=error-2-36058.mp3"></audio>
-<audio id="winSound" src="https://cdn.pixabay.com/download/audio/2022/03/15/audio_7f6b1e1c3c.mp3?filename=success-fanfare-trumpets-6185.mp3"></audio>
-<audio id="loseSound" src="https://cdn.pixabay.com/download/audio/2022/03/15/audio_4c0d06d7f7.mp3?filename=fail-144746.mp3"></audio>
 
 <script>
 const colors = [
@@ -101,6 +98,7 @@ let round = 0;
 let canClick = false;
 let sequence = [];
 let interval;
+let audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 
 // UI
 const colorOptions = document.getElementById("colorOptions");
@@ -114,47 +112,48 @@ const roundDisplay = document.getElementById("round");
 const feedback = document.getElementById("feedback");
 const finalScore = document.getElementById("finalScore");
 const targetColorText = document.getElementById("targetColorText");
+
 const startBtn = document.getElementById("startBtn");
+const stopBtn = document.getElementById("stopBtn");
 
-// AUDIO refs
-const successSound = document.getElementById("successSound");
-const errorSound = document.getElementById("errorSound");
-const winSound = document.getElementById("winSound");
-const loseSound = document.getElementById("loseSound");
-
-// desbloqueo iPhone
-function unlockAudio() {
-    [successSound, errorSound, winSound, loseSound].forEach(a => {
-        a.volume = 0;
-        a.play().then(() => {
-            a.pause();
-            a.currentTime = 0;
-            a.volume = 1;
-        }).catch(()=>{});
-    });
-}
-
+// AUDIO simple (PC OK)
 function playSuccessSound() {
-    successSound.currentTime = 0;
-    successSound.play();
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+
+    osc.frequency.value = 800;
+    gain.gain.value = 0.1;
+
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+
+    osc.start();
+    osc.stop(audioCtx.currentTime + 0.15);
 }
 
 function playErrorSound() {
-    errorSound.currentTime = 0;
-    errorSound.play();
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+
+    osc.frequency.value = 200;
+    gain.gain.value = 0.1;
+
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+
+    osc.start();
+    osc.stop(audioCtx.currentTime + 0.2);
 }
 
 // animaciones
 function animateSuccess() {
-    gameArea.classList.remove("animate-error");
     gameArea.classList.add("animate-success");
-    setTimeout(() => gameArea.classList.remove("animate-success"), 350);
+    setTimeout(() => gameArea.classList.remove("animate-success"), 300);
 }
 
 function animateError() {
-    gameArea.classList.remove("animate-success");
     gameArea.classList.add("animate-error");
-    setTimeout(() => gameArea.classList.remove("animate-error"), 350);
+    setTimeout(() => gameArea.classList.remove("animate-error"), 300);
 }
 
 // botones color
@@ -178,21 +177,37 @@ colors.forEach(c => {
 });
 
 // START
-startBtn.addEventListener("click", beginRounds);
-
-function beginRounds() {
-    unlockAudio(); // 🔑 clave iPhone
-
+startBtn.addEventListener("click", () => {
     score = 0;
     round = 0;
     scoreDisplay.textContent = score;
 
     startBtn.style.display = "none";
+    stopBtn.classList.remove("hidden");
 
     sequence = generateSequence();
+
     nextRound();
 
+    // FIX: delay inicial
     interval = setInterval(nextRound, 2000);
+});
+
+// STOP
+stopBtn.addEventListener("click", stopGame);
+
+function stopGame() {
+    clearInterval(interval);
+
+    gameScreen.classList.add("hidden");
+    startScreen.classList.remove("hidden");
+
+    startBtn.style.display = "block";
+    stopBtn.classList.add("hidden");
+
+    score = 0;
+    round = 0;
+    feedback.textContent = "";
 }
 
 // secuencia
@@ -244,10 +259,12 @@ function nextRound() {
     }, 1800);
 }
 
+// CLICK
 gameArea.addEventListener("click", () => {
     if (!canClick) return;
 
     canClick = false;
+
     const isMatch = sequence[round - 1];
 
     if (isMatch) {
@@ -271,14 +288,6 @@ function endGame() {
     endScreen.classList.remove("hidden");
 
     finalScore.textContent = score;
-
-    if (score >= 7) {
-        winSound.currentTime = 0;
-        winSound.play();
-    } else {
-        loseSound.currentTime = 0;
-        loseSound.play();
-    }
 }
 </script>
 
