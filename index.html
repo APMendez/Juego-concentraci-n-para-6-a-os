@@ -66,6 +66,7 @@ let currentRounds, currentTime;
 let targetColor;
 
 let score, round, sequence, canClick, interval;
+let mistakes = 0;
 
 // DATA
 const colors = [
@@ -103,11 +104,11 @@ const levelDisplay = document.getElementById("level");
 
 const startBtn = document.getElementById("startBtn");
 
-// COLORES
+// BOTONES DE COLOR
 colors.forEach(c=>{
     const btn=document.createElement("button");
     btn.style.backgroundColor=c.value;
-    btn.className="w-10 h-10 rounded-full";
+    btn.className="w-10 h-10 rounded-full border-2";
     btn.onclick=()=>{
         targetColor=c;
         startScreen.classList.add("hidden");
@@ -141,6 +142,7 @@ function generateSequence(){
 function beginGame(){
     score=0;
     round=0;
+    mistakes=0;
 
     updateDifficulty();
     sequence=generateSequence();
@@ -198,6 +200,7 @@ function nextRound(){
             }else{
                 feedback.textContent="¡Se te pasó!";
                 errorFX();
+                mistakes++;
             }
             scoreDisplay.textContent=score;
         }
@@ -218,6 +221,7 @@ gameArea.onclick=()=>{
     }else{
         feedback.textContent="¡No!";
         errorFX();
+        mistakes++;
     }
 
     scoreDisplay.textContent=score;
@@ -227,8 +231,7 @@ gameArea.onclick=()=>{
 function endGame(){
     clearInterval(interval);
 
-    // evaluar victoria perfecta
-    if(score === currentRounds){
+    if(mistakes === 0){
         streak++;
         level++;
     } else {
@@ -243,14 +246,14 @@ function endGame(){
     finalLevel.textContent = level;
 }
 
-// RESTART → vuelve a inicio
+// RESTART
 function restart(){
     level = 0;
     streak = 0;
     goToStart();
 }
 
-// volver al inicio limpio
+// VOLVER A INICIO
 function goToStart(){
     gameScreen.classList.add("hidden");
     endScreen.classList.add("hidden");
