@@ -95,6 +95,7 @@ const shapes = ["●","■","▲","★"];
 let targetColor=null, score=0, round=0, canClick=false;
 let sequence=[], timeoutId=null, currentMatch=false;
 let streak=0;
+let currentDelay=2000;
 
 // UI
 const colorOptions=document.getElementById("colorOptions");
@@ -115,6 +116,11 @@ const bestStreakDisplay=document.getElementById("bestStreak");
 
 bestStreakDisplay.textContent = bestStreak;
 
+// velocidad según racha
+function getDelayFromStreak(){
+  return Math.max(600, 2000 - (streak * 150));
+}
+
 // botones color
 colors.forEach(c=>{
   const btn=document.createElement("button");
@@ -134,12 +140,6 @@ colors.forEach(c=>{
   colorOptions.appendChild(btn);
 });
 
-// velocidad progresiva
-function getDelayForRound(r){
-  const min=600, max=2000;
-  return max - ((r-1)*(max-min)/9);
-}
-
 function beginRounds(){
   if(timeoutId) return;
 
@@ -152,6 +152,10 @@ function beginRounds(){
   feedback.textContent="";
 
   sequence=generateSequence();
+
+  // 🔥 velocidad fija para toda la ronda
+  currentDelay = getDelayFromStreak();
+
   scheduleNext();
 }
 
@@ -161,12 +165,10 @@ function scheduleNext(){
     return;
   }
 
-  const delay = getDelayForRound(round+1);
-
   timeoutId = setTimeout(()=>{
     nextRound();
     scheduleNext();
-  }, delay);
+  }, currentDelay);
 }
 
 function stopGame(){
@@ -201,8 +203,6 @@ function nextRound(){
   gameArea.textContent=shape;
   gameArea.style.color=color.value;
 
-  const delay = getDelayForRound(round);
-
   setTimeout(()=>{ canClick=true; },200);
 
   setTimeout(()=>{
@@ -220,7 +220,7 @@ function nextRound(){
       scoreDisplay.textContent=score;
       canClick=false;
     }
-  }, delay*0.8);
+  }, currentDelay * 0.8);
 }
 
 gameArea.addEventListener("click",()=>{
