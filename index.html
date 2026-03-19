@@ -7,285 +7,181 @@
 <script src="https://cdn.tailwindcss.com"></script>
 </head>
 
-<body class="bg-blue-100 flex items-center justify-center h-screen select-none">
+<body class="bg-blue-100 flex items-center justify-center h-screen">
 
 <div class="text-center">
 
-<!-- INICIO -->
 <div id="startScreen">
-    <h1 class="text-3xl font-bold mb-4">🎯 Modo Reto</h1>
-    <p class="mb-2">Elegí un color:</p>
-    <div id="colorOptions" class="flex flex-wrap justify-center gap-3 mb-4"></div>
+<h1 class="text-3xl mb-4">🎯 Modo Reto</h1>
+<p>Elegí un color:</p>
+<div id="colorOptions" class="flex flex-wrap justify-center gap-3 mt-3"></div>
 </div>
 
-<!-- JUEGO -->
 <div id="gameScreen" class="hidden">
-    <h2 class="mb-2">Tocá solo: <span id="targetColorText"></span></h2>
-    <p>Nivel: <span id="level"></span></p>
-    <p>Puntos: <span id="score">0</span></p>
-    <p>Intento: <span id="round">0</span></p>
+<p>Nivel: <span id="level"></span></p>
+<p>Puntos: <span id="score">0</span></p>
+<p>Intento: <span id="round">0</span></p>
 
-    <button id="startBtn" onclick="beginGame()" class="bg-green-500 text-white px-6 py-2 rounded mb-2">
-        START
-    </button>
+<button id="startBtn" onclick="beginGame()" class="bg-green-500 text-white px-4 py-2 rounded my-2">START</button>
+<button onclick="stopGame()" class="bg-red-500 text-white px-4 py-2 rounded mb-3">Detener</button>
 
-    <button onclick="stopGame()" class="bg-red-500 text-white px-4 py-2 rounded mb-3">
-        Detener
-    </button>
-
-    <div id="gameArea" class="w-64 h-64 bg-white rounded-2xl flex items-center justify-center text-6xl shadow-lg"></div>
-
-    <p id="feedback" class="mt-3 text-xl"></p>
+<div id="gameArea" class="w-64 h-64 bg-white flex items-center justify-center text-6xl rounded-xl shadow"></div>
+<p id="feedback"></p>
 </div>
 
-<!-- FIN -->
 <div id="endScreen" class="hidden">
-    <h1 class="text-3xl mb-3">Resultado</h1>
-    <p>Puntaje: <span id="finalScore"></span></p>
-    <p>Nivel actual: <span id="finalLevel"></span></p>
-
-    <button onclick="restart()" class="bg-blue-500 text-white px-6 py-3 rounded mt-4">
-        Jugar otra vez
-    </button>
+<h2>Resultado</h2>
+<p id="finalScore"></p>
+<p id="finalLevel"></p>
+<button onclick="restart()" class="bg-blue-500 text-white px-4 py-2 rounded mt-3">Jugar otra vez</button>
 </div>
 
 </div>
 
 <script>
-// CONFIG
-const MIN_ROUNDS = 5;
-const MAX_ROUNDS = 10;
-const MAX_TIME = 2000;
-const MIN_TIME = 650;
-
-// ESTADO GLOBAL
-let level = 0;
-let streak = 0;
-
-let currentRounds, currentTime;
-let targetColor;
-
-let score, round, sequence, canClick, interval;
-let mistakes = 0;
-
-// DATA
 const colors = [
-    {name:"rojo",value:"#ef4444"},
-    {name:"azul",value:"#3b82f6"},
-    {name:"verde",value:"#22c55e"},
-    {name:"amarillo",value:"#facc15"},
-    {name:"violeta",value:"#a855f7"},
-    {name:"rosa",value:"#ec4899"},
-    {name:"naranja",value:"#f97316"},
-    {name:"gris",value:"#6b7280"},
-    {name:"negro",value:"#000"},
-    {name:"celeste",value:"#06b6d4"}
+{name:"rojo",value:"#ef4444"},
+{name:"azul",value:"#3b82f6"},
+{name:"verde",value:"#22c55e"}
 ];
 
-const shapes = ["●","■","▲","★"];
+const shapes = ["●","■","▲"];
 
-// UI
-const colorOptions = document.getElementById("colorOptions");
-const startScreen = document.getElementById("startScreen");
-const gameScreen = document.getElementById("gameScreen");
-const endScreen = document.getElementById("endScreen");
+let level=0;
+let score, round, sequence, canClick, interval, mistakes;
+let currentRounds, currentTime;
+let targetColor;
+let timeouts=[];
 
-const gameArea = document.getElementById("gameArea");
-const feedback = document.getElementById("feedback");
+const MIN_ROUNDS=5, MAX_ROUNDS=10, MAX_TIME=2000, MIN_TIME=650;
 
-const scoreDisplay = document.getElementById("score");
-const roundDisplay = document.getElementById("round");
+const startScreen=document.getElementById("startScreen");
+const gameScreen=document.getElementById("gameScreen");
+const endScreen=document.getElementById("endScreen");
 
-const finalScore = document.getElementById("finalScore");
-const finalLevel = document.getElementById("finalLevel");
+const gameArea=document.getElementById("gameArea");
+const feedback=document.getElementById("feedback");
 
-const targetColorText = document.getElementById("targetColorText");
-const levelDisplay = document.getElementById("level");
+const scoreDisplay=document.getElementById("score");
+const roundDisplay=document.getElementById("round");
+const levelDisplay=document.getElementById("level");
 
-const startBtn = document.getElementById("startBtn");
+const finalScore=document.getElementById("finalScore");
+const finalLevel=document.getElementById("finalLevel");
 
-// BOTONES DE COLOR
+const startBtn=document.getElementById("startBtn");
+
+// colores
 colors.forEach(c=>{
-    const btn=document.createElement("button");
-    btn.style.backgroundColor=c.value;
-    btn.className="w-10 h-10 rounded-full border-2";
-    btn.onclick=()=>{
-        targetColor=c;
-        startScreen.classList.add("hidden");
-        gameScreen.classList.remove("hidden");
-        targetColorText.textContent=c.name;
-        levelDisplay.textContent=level;
-    };
-    colorOptions.appendChild(btn);
+const b=document.createElement("button");
+b.style.backgroundColor=c.value;
+b.className="w-10 h-10 rounded-full";
+b.onclick=()=>{
+targetColor=c;
+startScreen.classList.add("hidden");
+gameScreen.classList.remove("hidden");
+levelDisplay.textContent=level;
+};
+colorOptions.appendChild(b);
 });
 
-// DIFICULTAD
 function updateDifficulty(){
-    currentRounds = Math.min(MIN_ROUNDS + level, MAX_ROUNDS);
-
-    const progress = (currentRounds - MIN_ROUNDS) / (MAX_ROUNDS - MIN_ROUNDS);
-    currentTime = MAX_TIME - progress * (MAX_TIME - MIN_TIME);
+currentRounds=Math.min(MIN_ROUNDS+level,MAX_ROUNDS);
+let p=(currentRounds-MIN_ROUNDS)/(MAX_ROUNDS-MIN_ROUNDS);
+currentTime=MAX_TIME-(p*(MAX_TIME-MIN_TIME));
 }
 
-// SECUENCIA
 function generateSequence(){
-    let seq=[];
-    let minMatches=Math.ceil(currentRounds*0.4);
-
-    for(let i=0;i<minMatches;i++) seq.push(true);
-    for(let i=minMatches;i<currentRounds;i++) seq.push(Math.random()<0.5);
-
-    return seq.sort(()=>Math.random()-0.5);
+let seq=[];
+let min=Math.ceil(currentRounds*0.4);
+for(let i=0;i<min;i++)seq.push(true);
+for(let i=min;i<currentRounds;i++)seq.push(Math.random()<0.5);
+return seq.sort(()=>Math.random()-0.5);
 }
 
-// START
 function beginGame(){
-    score=0;
-    round=0;
-    mistakes=0;
+score=0; round=0; mistakes=0;
+updateDifficulty();
+sequence=generateSequence();
 
-    updateDifficulty();
-    sequence=generateSequence();
+startBtn.style.display="none";
 
-    scoreDisplay.textContent=0;
-    roundDisplay.textContent=0;
-
-    startBtn.style.display="none";
-
-    nextRound();
-    interval=setInterval(nextRound,currentTime);
+nextRound();
+interval=setInterval(nextRound,currentTime);
 }
 
-// STOP
-function stopGame(){
-    clearInterval(interval);
-    streak = 0;
-    level = 0;
-    goToStart();
-}
-
-// RONDA
 function nextRound(){
-    if(round>=currentRounds){
-        endGame();
-        return;
-    }
+if(round>=currentRounds){endGame();return;}
 
-    feedback.textContent="";
-    canClick=true;
+canClick=true;
+const isMatch=sequence[round];
+round++;
 
-    const isMatch=sequence[round];
-    round++;
+roundDisplay.textContent=round;
 
-    roundDisplay.textContent=round;
+const shape=shapes[Math.floor(Math.random()*shapes.length)];
+gameArea.textContent=shape;
 
-    const shape=shapes[Math.floor(Math.random()*shapes.length)];
+const t=setTimeout(()=>{
+if(canClick){
+canClick=false;
+if(!isMatch)score++;
+else mistakes++;
+scoreDisplay.textContent=score;
+}
+}, currentTime-200);
 
-    let color;
-    if(isMatch){
-        color=targetColor;
-    }else{
-        const others=colors.filter(c=>c.name!==targetColor.name);
-        color=others[Math.floor(Math.random()*others.length)];
-    }
-
-    gameArea.textContent=shape;
-    gameArea.style.color=color.value;
-
-    setTimeout(()=>{
-        if(canClick){
-            canClick=false;
-            if(!isMatch){
-                score++;
-            }else{
-                feedback.textContent="¡Se te pasó!";
-                errorFX();
-                mistakes++;
-            }
-            scoreDisplay.textContent=score;
-        }
-    }, currentTime-200);
+timeouts.push(t);
 }
 
-// CLICK
 gameArea.onclick=()=>{
-    if(!canClick)return;
+if(!canClick)return;
+canClick=false;
 
-    canClick=false;
-    const isMatch=sequence[round-1];
+const isMatch=sequence[round-1];
 
-    if(isMatch){
-        score++;
-        feedback.textContent="¡Bien!";
-        successFX();
-    }else{
-        feedback.textContent="¡No!";
-        errorFX();
-        mistakes++;
-    }
+if(isMatch)score++;
+else mistakes++;
 
-    scoreDisplay.textContent=score;
+scoreDisplay.textContent=score;
 };
 
-// FIN
 function endGame(){
-    clearInterval(interval);
+clearInterval(interval);
 
-    if(mistakes === 0){
-        streak++;
-        level++;
-    } else {
-        streak = 0;
-        level = 0;
-    }
+// limpiar timeouts
+timeouts.forEach(t=>clearTimeout(t));
+timeouts=[];
 
-    gameScreen.classList.add("hidden");
-    endScreen.classList.remove("hidden");
+if(mistakes===0) level++;
+else level=0;
 
-    finalScore.textContent = score + "/" + currentRounds;
-    finalLevel.textContent = level;
+gameScreen.classList.add("hidden");
+endScreen.classList.remove("hidden");
+
+finalScore.textContent=score+"/"+currentRounds;
+finalLevel.textContent="Nivel "+level;
 }
 
-// RESTART
+function stopGame(){
+clearInterval(interval);
+timeouts.forEach(t=>clearTimeout(t));
+timeouts=[];
+
+level=0;
+goStart();
+}
+
 function restart(){
-    level = 0;
-    streak = 0;
-    goToStart();
+level=0;
+goStart();
 }
 
-// VOLVER A INICIO
-function goToStart(){
-    gameScreen.classList.add("hidden");
-    endScreen.classList.add("hidden");
-    startScreen.classList.remove("hidden");
-
-    targetColor = null;
-    startBtn.style.display="block";
-}
-
-// FX
-const audioCtx=new(window.AudioContext||window.webkitAudioContext)();
-
-function successFX(){
-    gameArea.animate([{transform:"scale(1)"},{transform:"scale(1.3)"},{transform:"scale(1)"}],{duration:250});
-    beep(800,0.15);
-}
-
-function errorFX(){
-    gameArea.animate([{transform:"translateX(0)"},{transform:"translateX(-10px)"},{transform:"translateX(10px)"},{transform:"translateX(0)"}],{duration:300});
-    beep(200,0.2,"sawtooth");
-}
-
-function beep(freq,time,type="sine"){
-    const osc=audioCtx.createOscillator();
-    const gain=audioCtx.createGain();
-    osc.type=type;
-    osc.frequency.value=freq;
-    gain.gain.value=0.1;
-    osc.connect(gain);
-    gain.connect(audioCtx.destination);
-    osc.start();
-    osc.stop(audioCtx.currentTime+time);
+function goStart(){
+gameScreen.classList.add("hidden");
+endScreen.classList.add("hidden");
+startScreen.classList.remove("hidden");
+startBtn.style.display="block";
 }
 </script>
 
