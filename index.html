@@ -21,13 +21,8 @@
     100% { transform: translate3d(0,0,0); }
 }
 
-.animate-success {
-    animation: pop 0.3s ease;
-}
-
-.animate-error {
-    animation: shake 0.3s;
-}
+.animate-success { animation: pop 0.3s ease; }
+.animate-error { animation: shake 0.3s; }
 </style>
 </head>
 
@@ -35,259 +30,254 @@
 
 <div class="text-center">
 
-    <!-- Inicio -->
-    <div id="startScreen">
-        <h1 class="text-3xl font-bold mb-4">🎯 Elegí el color</h1>
-        <div id="colorOptions" class="flex flex-wrap justify-center gap-3 mb-4"></div>
-    </div>
+<div id="startScreen">
+    <h1 class="text-3xl font-bold mb-4">🎯 Elegí el color</h1>
+    <div id="colorOptions" class="flex flex-wrap justify-center gap-3 mb-4"></div>
+</div>
 
-    <!-- Juego -->
-    <div id="gameScreen" class="hidden">
-        <h1 class="text-2xl font-bold mb-2">
-            Tocá solo: <span id="targetColorText"></span>
-        </h1>
+<div id="gameScreen" class="hidden">
+    <h1 class="text-2xl font-bold mb-2">
+        Tocá solo: <span id="targetColorText"></span>
+    </h1>
 
-        <button id="startBtn" class="bg-green-500 text-white px-6 py-3 rounded-xl text-xl mb-2 shadow">
-            START
-        </button>
+    <button id="startBtn" class="bg-green-500 text-white px-6 py-3 rounded-xl text-xl mb-2 shadow">
+        START
+    </button>
 
-        <!-- STOP -->
-        <button id="stopBtn" class="bg-red-500 text-white px-6 py-2 rounded-xl text-lg mb-4 shadow hidden">
-            STOP
-        </button>
+    <button id="stopBtn" class="bg-red-500 text-white px-6 py-2 rounded-xl text-lg mb-4 shadow hidden">
+        STOP
+    </button>
 
-        <p>Puntos: <span id="score">0</span></p>
-        <p class="mb-4">Intento: <span id="round">0</span>/10</p>
+    <p>Puntos: <span id="score">0</span></p>
+    <p class="mb-4">Intento: <span id="round">0</span>/10</p>
 
-        <div id="gameArea" class="w-64 h-64 flex items-center justify-center rounded-2xl bg-white shadow-lg text-6xl">
-        </div>
+    <div id="gameArea" class="w-64 h-64 flex items-center justify-center rounded-2xl bg-white shadow-lg text-6xl"></div>
 
-        <p id="feedback" class="mt-4 text-xl font-semibold"></p>
-    </div>
+    <p id="feedback" class="mt-4 text-xl font-semibold"></p>
+</div>
 
-    <!-- Fin -->
-    <div id="endScreen" class="hidden">
-        <h1 class="text-3xl font-bold mb-4">🎉 Fin del juego</h1>
-        <p class="text-xl mb-4">Puntaje: <span id="finalScore"></span>/10</p>
-        <button onclick="location.reload()" class="bg-blue-500 text-white px-6 py-3 rounded-xl text-xl shadow">
-            Jugar de nuevo
-        </button>
-    </div>
+<div id="endScreen" class="hidden">
+    <h1 class="text-3xl font-bold mb-4">🎉 Fin del juego</h1>
+    <p class="text-xl mb-4">Puntaje: <span id="finalScore"></span>/10</p>
+    <button onclick="location.reload()" class="bg-blue-500 text-white px-6 py-3 rounded-xl text-xl shadow">
+        Jugar de nuevo
+    </button>
+</div>
 
 </div>
 
 <script>
 const colors = [
-    {name: "rojo", value: "#ef4444"},
-    {name: "azul", value: "#3b82f6"},
-    {name: "verde", value: "#22c55e"},
-    {name: "amarillo", value: "#facc15"},
-    {name: "violeta", value: "#a855f7"},
-    {name: "rosa", value: "#ec4899"},
-    {name: "naranja", value: "#f97316"},
-    {name: "gris", value: "#6b7280"},
-    {name: "negro", value: "#000000"},
-    {name: "celeste", value: "#06b6d4"}
+    {name:"rojo",value:"#ef4444"},
+    {name:"azul",value:"#3b82f6"},
+    {name:"verde",value:"#22c55e"},
+    {name:"amarillo",value:"#facc15"},
+    {name:"violeta",value:"#a855f7"},
+    {name:"rosa",value:"#ec4899"},
+    {name:"naranja",value:"#f97316"},
+    {name:"gris",value:"#6b7280"},
+    {name:"negro",value:"#000"},
+    {name:"celeste",value:"#06b6d4"}
 ];
 
-const shapes = ["●","■","▲","★"];
+const shapes=["●","■","▲","★"];
 
-let targetColor = null;
-let score = 0;
-let round = 0;
-let canClick = false;
-let sequence = [];
-let interval;
-let audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+let targetColor=null;
+let score=0;
+let round=0;
+let canClick=false;
+let sequence=[];
+let timeoutId;
+let speed=2000;
 
-// UI
-const colorOptions = document.getElementById("colorOptions");
-const startScreen = document.getElementById("startScreen");
-const gameScreen = document.getElementById("gameScreen");
-const endScreen = document.getElementById("endScreen");
+const audioCtx=new (window.AudioContext||window.webkitAudioContext)();
 
-const gameArea = document.getElementById("gameArea");
-const scoreDisplay = document.getElementById("score");
-const roundDisplay = document.getElementById("round");
-const feedback = document.getElementById("feedback");
-const finalScore = document.getElementById("finalScore");
-const targetColorText = document.getElementById("targetColorText");
-
-const startBtn = document.getElementById("startBtn");
-const stopBtn = document.getElementById("stopBtn");
-
-// AUDIO simple (PC OK)
-function playSuccessSound() {
-    const osc = audioCtx.createOscillator();
-    const gain = audioCtx.createGain();
-
-    osc.frequency.value = 800;
-    gain.gain.value = 0.1;
-
+// sonidos básicos
+function beep(freq,duration){
+    const osc=audioCtx.createOscillator();
+    const gain=audioCtx.createGain();
+    osc.frequency.value=freq;
+    gain.gain.value=0.1;
     osc.connect(gain);
     gain.connect(audioCtx.destination);
-
     osc.start();
-    osc.stop(audioCtx.currentTime + 0.15);
+    osc.stop(audioCtx.currentTime+duration);
 }
 
-function playErrorSound() {
-    const osc = audioCtx.createOscillator();
-    const gain = audioCtx.createGain();
+function playSuccessSound(){beep(800,0.15);}
+function playErrorSound(){beep(200,0.2);}
 
-    osc.frequency.value = 200;
-    gain.gain.value = 0.1;
+// sonidos finales
+function playWinSound(){
+    beep(600,0.1);
+    setTimeout(()=>beep(900,0.15),120);
+    setTimeout(()=>beep(1200,0.2),240);
+}
 
-    osc.connect(gain);
-    gain.connect(audioCtx.destination);
-
-    osc.start();
-    osc.stop(audioCtx.currentTime + 0.2);
+function playLoseSound(){
+    beep(500,0.15);
+    setTimeout(()=>beep(300,0.2),150);
 }
 
 // animaciones
-function animateSuccess() {
+function animateSuccess(){
     gameArea.classList.add("animate-success");
-    setTimeout(() => gameArea.classList.remove("animate-success"), 300);
+    setTimeout(()=>gameArea.classList.remove("animate-success"),300);
 }
 
-function animateError() {
+function animateError(){
     gameArea.classList.add("animate-error");
-    setTimeout(() => gameArea.classList.remove("animate-error"), 300);
+    setTimeout(()=>gameArea.classList.remove("animate-error"),300);
 }
+
+// UI refs
+const colorOptions=document.getElementById("colorOptions");
+const startScreen=document.getElementById("startScreen");
+const gameScreen=document.getElementById("gameScreen");
+const endScreen=document.getElementById("endScreen");
+const gameArea=document.getElementById("gameArea");
+const scoreDisplay=document.getElementById("score");
+const roundDisplay=document.getElementById("round");
+const feedback=document.getElementById("feedback");
+const finalScore=document.getElementById("finalScore");
+const targetColorText=document.getElementById("targetColorText");
+const startBtn=document.getElementById("startBtn");
+const stopBtn=document.getElementById("stopBtn");
 
 // botones color
-colors.forEach(c => {
-    const btn = document.createElement("button");
-    btn.style.backgroundColor = c.value;
-    btn.className = "w-10 h-10 rounded-full border-2";
+colors.forEach(c=>{
+    const btn=document.createElement("button");
+    btn.style.backgroundColor=c.value;
+    btn.className="w-10 h-10 rounded-full border-2";
 
-    btn.onclick = () => {
-        targetColor = c;
-
-        document.querySelectorAll("#colorOptions button").forEach(b => b.classList.remove("ring-4"));
+    btn.onclick=()=>{
+        targetColor=c;
+        document.querySelectorAll("#colorOptions button").forEach(b=>b.classList.remove("ring-4"));
         btn.classList.add("ring-4");
 
         startScreen.classList.add("hidden");
         gameScreen.classList.remove("hidden");
-        targetColorText.textContent = c.name;
+        targetColorText.textContent=c.name;
     };
 
     colorOptions.appendChild(btn);
 });
 
 // START
-startBtn.addEventListener("click", () => {
-    score = 0;
-    round = 0;
-    scoreDisplay.textContent = score;
+startBtn.onclick=()=>{
+    score=0;
+    round=0;
+    speed=2000;
 
-    startBtn.style.display = "none";
+    startBtn.style.display="none";
     stopBtn.classList.remove("hidden");
 
-    sequence = generateSequence();
-
+    sequence=generateSequence();
     nextRound();
-
-    // FIX: delay inicial
-    interval = setInterval(nextRound, 2000);
-});
+};
 
 // STOP
-stopBtn.addEventListener("click", stopGame);
+stopBtn.onclick=()=>{
+    clearTimeout(timeoutId);
+    resetGame();
+};
 
-function stopGame() {
-    clearInterval(interval);
-
+function resetGame(){
     gameScreen.classList.add("hidden");
     startScreen.classList.remove("hidden");
 
-    startBtn.style.display = "block";
+    startBtn.style.display="block";
     stopBtn.classList.add("hidden");
 
-    score = 0;
-    round = 0;
-    feedback.textContent = "";
+    score=0;
+    round=0;
+    feedback.textContent="";
 }
 
 // secuencia
-function generateSequence() {
-    let seq = [];
-    for (let i = 0; i < 4; i++) seq.push(true);
-    for (let i = 4; i < 10; i++) seq.push(Math.random() < 0.5);
-    return seq.sort(() => Math.random() - 0.5);
+function generateSequence(){
+    let seq=[];
+    for(let i=0;i<4;i++)seq.push(true);
+    for(let i=4;i<10;i++)seq.push(Math.random()<0.5);
+    return seq.sort(()=>Math.random()-0.5);
 }
 
-function nextRound() {
-    if (round >= 10) return endGame();
+function nextRound(){
+    if(round>=10) return endGame();
 
-    feedback.textContent = "";
-    canClick = true;
+    feedback.textContent="";
+    canClick=true;
 
-    const isMatch = sequence[round];
+    const isMatch=sequence[round];
     round++;
+    roundDisplay.textContent=round;
 
-    roundDisplay.textContent = round;
-
-    const shape = shapes[Math.floor(Math.random() * shapes.length)];
+    const shape=shapes[Math.floor(Math.random()*shapes.length)];
 
     let color;
-    if (isMatch) {
-        color = targetColor;
-    } else {
-        const others = colors.filter(c => c.name !== targetColor.name);
-        color = others[Math.floor(Math.random() * others.length)];
+    if(isMatch) color=targetColor;
+    else{
+        const others=colors.filter(c=>c.name!==targetColor.name);
+        color=others[Math.floor(Math.random()*others.length)];
     }
 
-    gameArea.textContent = shape;
-    gameArea.style.color = color.value;
+    gameArea.textContent=shape;
+    gameArea.style.color=color.value;
 
-    setTimeout(() => {
-        if (canClick) {
-            canClick = false;
+    timeoutId=setTimeout(()=>{
+        if(canClick){
+            canClick=false;
 
-            if (!isMatch) {
+            if(!isMatch){
                 score++;
-            } else {
-                feedback.textContent = "¡Se te pasó!";
+                speed=Math.max(900,speed-100);
+            }else{
+                feedback.textContent="¡Se te pasó!";
                 playErrorSound();
                 animateError();
+                speed=Math.min(2500,speed+150);
             }
 
-            scoreDisplay.textContent = score;
+            scoreDisplay.textContent=score;
+            timeoutId=setTimeout(nextRound,speed);
         }
-    }, 1800);
+    }, speed-200);
 }
 
 // CLICK
-gameArea.addEventListener("click", () => {
-    if (!canClick) return;
+gameArea.onclick=()=>{
+    if(!canClick)return;
 
-    canClick = false;
+    canClick=false;
+    const isMatch=sequence[round-1];
 
-    const isMatch = sequence[round - 1];
-
-    if (isMatch) {
+    if(isMatch){
         score++;
-        feedback.textContent = "¡Bien!";
+        feedback.textContent="¡Bien!";
         playSuccessSound();
         animateSuccess();
-    } else {
-        feedback.textContent = "¡No!";
+        speed=Math.max(900,speed-100);
+    }else{
+        feedback.textContent="¡No!";
         playErrorSound();
         animateError();
+        speed=Math.min(2500,speed+150);
     }
 
-    scoreDisplay.textContent = score;
-});
+    scoreDisplay.textContent=score;
+    timeoutId=setTimeout(nextRound,speed);
+};
 
-function endGame() {
-    clearInterval(interval);
+function endGame(){
+    clearTimeout(timeoutId);
 
     gameScreen.classList.add("hidden");
     endScreen.classList.remove("hidden");
 
-    finalScore.textContent = score;
+    finalScore.textContent=score;
+
+    if(score>=7) playWinSound();
+    else playLoseSound();
 }
 </script>
 
