@@ -5,11 +5,36 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Juego de Concentración</title>
 <script src="https://cdn.tailwindcss.com"></script>
+
+<style>
+@keyframes pop {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.4); }
+    100% { transform: scale(1); }
+}
+
+@keyframes shake {
+    0% { transform: translateX(0); }
+    25% { transform: translateX(-10px); }
+    50% { transform: translateX(10px); }
+    75% { transform: translateX(-6px); }
+    100% { transform: translateX(0); }
+}
+
+.animate-success {
+    animation: pop 0.3s ease;
+}
+
+.animate-error {
+    animation: shake 0.3s;
+}
+</style>
+
 </head>
 
 <body class="bg-blue-100 flex items-center justify-center h-screen select-none">
 
-<div id="app" class="text-center">
+<div class="text-center">
 
     <!-- Pantalla inicio -->
     <div id="startScreen">
@@ -23,7 +48,7 @@
             Tocá solo: <span id="targetColorText"></span>
         </h1>
 
-        <button onclick="beginRounds()" class="bg-green-500 text-white px-6 py-3 rounded-xl text-xl mb-4 shadow">
+        <button id="startBtn" class="bg-green-500 text-white px-6 py-3 rounded-xl text-xl mb-4 shadow">
             START
         </button>
 
@@ -46,6 +71,7 @@
     </div>
 
 </div>
+
 <script>
 const colors = [
     {name: "rojo", value: "#ef4444"},
@@ -81,32 +107,31 @@ const roundDisplay = document.getElementById("round");
 const feedback = document.getElementById("feedback");
 const finalScore = document.getElementById("finalScore");
 const targetColorText = document.getElementById("targetColorText");
+const startBtn = document.getElementById("startBtn");
 
 // AUDIO
-const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+let audioCtx = null;
+
+function initAudio() {
+    if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    if (audioCtx.state === "suspended") {
+        audioCtx.resume();
+    }
+}
 
 function playSuccessSound() {
+    if (!audioCtx) return;
+
     const osc = audioCtx.createOscillator();
     const gain = audioCtx.createGain();
 
     osc.type = "sine";
-    osc.frequency.value = 800;
-    gain.gain.value = 0.1;
+    osc.frequency.value = 900;
 
-    osc.connect(gain);
-    gain.connect(audioCtx.destination);
-
-    osc.start();
-    osc.stop(audioCtx.currentTime + 0.15);
-}
-
-function playErrorSound() {
-    const osc = audioCtx.createOscillator();
-    const gain = audioCtx.createGain();
-
-    osc.type = "sawtooth";
-    osc.frequency.value = 200;
-    gain.gain.value = 0.1;
+    gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.2);
 
     osc.connect(gain);
     gain.connect(audioCtx.destination);
@@ -115,22 +140,42 @@ function playErrorSound() {
     osc.stop(audioCtx.currentTime + 0.2);
 }
 
+function playErrorSound() {
+    if (!audioCtx) return;
+
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+
+    osc.type = "square";
+    osc.frequency.value = 180;
+
+    gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.3);
+
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+
+    osc.start();
+    osc.stop(audioCtx.currentTime + 0.3);
+}
+
 // ANIMACIONES
 function animateSuccess() {
-    gameArea.animate([
-        { transform: "scale(1)" },
-        { transform: "scale(1.3)" },
-        { transform: "scale(1)" }
-    ], { duration: 250 });
+    gameArea.classList.remove("animate-error");
+    gameArea.classList.add("animate-success");
+
+    setTimeout(() => {
+        gameArea.classList.remove("animate-success");
+    }, 300);
 }
 
 function animateError() {
-    gameArea.animate([
-        { transform: "translateX(0px)" },
-        { transform: "translateX(-10px)" },
-        { transform: "translateX(10px)" },
-        { transform: "translateX(0px)" }
-    ], { duration: 300 });
+    gameArea.classList.remove("animate-success");
+    gameArea.classList.add("animate-error");
+
+    setTimeout(() => {
+        gameArea.classList.remove("animate-error");
+    }, 300);
 }
 
 // Crear botones de colores
@@ -153,15 +198,17 @@ colors.forEach((c) => {
     colorOptions.appendChild(btn);
 });
 
-// Botón START
-const startButton = document.querySelector("button[onclick='beginRounds()']");
+// START
+startBtn.addEventListener("click", beginRounds);
 
 function beginRounds() {
+    initAudio();
+
     score = 0;
     round = 0;
     scoreDisplay.textContent = score;
 
-    startButton.style.display = "none";
+    startBtn.style.display = "none";
 
     sequence = generateSequence();
     nextRound();
@@ -169,7 +216,7 @@ function beginRounds() {
     interval = setInterval(nextRound, 2000);
 }
 
-// Secuencia con mínimo 4 correctos
+// Secuencia
 function generateSequence() {
     let seq = [];
 
@@ -254,5 +301,6 @@ function endGame() {
     finalScore.textContent = score;
 }
 </script>
+
 </body>
 </html>
