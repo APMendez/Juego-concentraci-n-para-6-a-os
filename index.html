@@ -9,24 +9,26 @@
 <style>
 @keyframes pop {
     0% { transform: scale(1); }
-    50% { transform: scale(1.4); }
+    50% { transform: scale(1.5); }
     100% { transform: scale(1); }
 }
 
 @keyframes shake {
-    0% { transform: translateX(0); }
-    25% { transform: translateX(-10px); }
-    50% { transform: translateX(10px); }
-    75% { transform: translateX(-6px); }
-    100% { transform: translateX(0); }
+    0% { transform: translate3d(0,0,0); }
+    25% { transform: translate3d(-12px,0,0); }
+    50% { transform: translate3d(12px,0,0); }
+    75% { transform: translate3d(-8px,0,0); }
+    100% { transform: translate3d(0,0,0); }
 }
 
 .animate-success {
-    animation: pop 0.3s ease;
+    animation: pop 0.35s ease;
+    will-change: transform;
 }
 
 .animate-error {
-    animation: shake 0.3s;
+    animation: shake 0.35s;
+    will-change: transform;
 }
 </style>
 
@@ -55,7 +57,7 @@
         <p>Puntos: <span id="score">0</span></p>
         <p class="mb-4">Intento: <span id="round">0</span>/10</p>
 
-        <div id="gameArea" class="w-64 h-64 flex items-center justify-center rounded-2xl bg-white shadow-lg text-6xl">
+        <div id="gameArea" class="w-64 h-64 flex items-center justify-center rounded-2xl bg-white shadow-lg text-6xl transform-gpu">
         </div>
 
         <p id="feedback" class="mt-4 text-xl font-semibold"></p>
@@ -109,16 +111,19 @@ const finalScore = document.getElementById("finalScore");
 const targetColorText = document.getElementById("targetColorText");
 const startBtn = document.getElementById("startBtn");
 
-// AUDIO
+// AUDIO (fix iPhone)
 let audioCtx = null;
 
 function initAudio() {
     if (!audioCtx) {
         audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     }
-    if (audioCtx.state === "suspended") {
-        audioCtx.resume();
-    }
+
+    const buffer = audioCtx.createBuffer(1, 1, 22050);
+    const source = audioCtx.createBufferSource();
+    source.buffer = buffer;
+    source.connect(audioCtx.destination);
+    source.start(0);
 }
 
 function playSuccessSound() {
@@ -166,7 +171,7 @@ function animateSuccess() {
 
     setTimeout(() => {
         gameArea.classList.remove("animate-success");
-    }, 300);
+    }, 350);
 }
 
 function animateError() {
@@ -175,7 +180,7 @@ function animateError() {
 
     setTimeout(() => {
         gameArea.classList.remove("animate-error");
-    }, 300);
+    }, 350);
 }
 
 // Crear botones de colores
@@ -202,7 +207,7 @@ colors.forEach((c) => {
 startBtn.addEventListener("click", beginRounds);
 
 function beginRounds() {
-    initAudio();
+    initAudio(); // 🔑 clave iPhone
 
     score = 0;
     round = 0;
