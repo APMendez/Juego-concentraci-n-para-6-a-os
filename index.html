@@ -92,7 +92,6 @@ let speed=2000;
 
 const audioCtx=new (window.AudioContext||window.webkitAudioContext)();
 
-// sonidos básicos
 function beep(freq,duration){
     const osc=audioCtx.createOscillator();
     const gain=audioCtx.createGain();
@@ -107,7 +106,6 @@ function beep(freq,duration){
 function playSuccessSound(){beep(800,0.15);}
 function playErrorSound(){beep(200,0.2);}
 
-// sonidos finales
 function playWinSound(){
     beep(600,0.1);
     setTimeout(()=>beep(900,0.15),120);
@@ -119,7 +117,6 @@ function playLoseSound(){
     setTimeout(()=>beep(300,0.2),150);
 }
 
-// animaciones
 function animateSuccess(){
     gameArea.classList.add("animate-success");
     setTimeout(()=>gameArea.classList.remove("animate-success"),300);
@@ -130,7 +127,6 @@ function animateError(){
     setTimeout(()=>gameArea.classList.remove("animate-error"),300);
 }
 
-// UI refs
 const colorOptions=document.getElementById("colorOptions");
 const startScreen=document.getElementById("startScreen");
 const gameScreen=document.getElementById("gameScreen");
@@ -144,7 +140,6 @@ const targetColorText=document.getElementById("targetColorText");
 const startBtn=document.getElementById("startBtn");
 const stopBtn=document.getElementById("stopBtn");
 
-// botones color
 colors.forEach(c=>{
     const btn=document.createElement("button");
     btn.style.backgroundColor=c.value;
@@ -163,7 +158,6 @@ colors.forEach(c=>{
     colorOptions.appendChild(btn);
 });
 
-// START
 startBtn.onclick=()=>{
     score=0;
     round=0;
@@ -176,7 +170,6 @@ startBtn.onclick=()=>{
     nextRound();
 };
 
-// STOP
 stopBtn.onclick=()=>{
     clearTimeout(timeoutId);
     resetGame();
@@ -194,7 +187,6 @@ function resetGame(){
     feedback.textContent="";
 }
 
-// secuencia
 function generateSequence(){
     let seq=[];
     for(let i=0;i<4;i++)seq.push(true);
@@ -230,12 +222,12 @@ function nextRound(){
 
             if(!isMatch){
                 score++;
-                speed=Math.max(900,speed-100);
+                speed=Math.max(750,speed-100);
             }else{
                 feedback.textContent="¡Se te pasó!";
                 playErrorSound();
                 animateError();
-                speed=Math.min(2500,speed+150);
+                speed=Math.min(2000,speed+150);
             }
 
             scoreDisplay.textContent=score;
@@ -244,7 +236,6 @@ function nextRound(){
     }, speed-200);
 }
 
-// CLICK
 gameArea.onclick=()=>{
     if(!canClick)return;
 
@@ -256,12 +247,12 @@ gameArea.onclick=()=>{
         feedback.textContent="¡Bien!";
         playSuccessSound();
         animateSuccess();
-        speed=Math.max(900,speed-100);
+        speed=Math.max(750,speed-100);
     }else{
         feedback.textContent="¡No!";
         playErrorSound();
         animateError();
-        speed=Math.min(2500,speed+150);
+        speed=Math.min(2000,speed+150);
     }
 
     scoreDisplay.textContent=score;
